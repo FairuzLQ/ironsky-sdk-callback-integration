@@ -69,7 +69,7 @@
   <main class="content">
     <div class="hero">
       <h1>SDK Integration &amp; Customization via Callback</h1>
-      <p>Pendekatan integrasi manual yang memberi developer aplikasi kontrol penuh: memanfaatkan callback mechanism IronSKY SDK untuk menangani security event secara langsung di sisi aplikasi, secara real-time.</p>
+      <p>Pendekatan integrasi manual yang memberi tim developer fleksibilitas lebih tinggi: memanfaatkan callback mechanism IronSKY SDK untuk menangani security event secara langsung di sisi aplikasi, secara real-time.</p>
       <div>
         <span class="pill">Metode: SDK callback</span>
         <span class="pill">Latensi: real-time</span>
@@ -98,7 +98,7 @@
       <h2>Callback Mechanism</h2>
       <p>Aplikasi mendaftarkan sebuah callback untuk tipe <code>RISKEVENT</code>. Setiap kali IronSKY mendeteksi ancaman, callback dipanggil beserta detail event dalam bentuk JSON. Urutan pemanggilan berikut wajib diikuti:</p>
       <div class="codeblock"><div class="cbar"><span class="fname">urutan inisialisasi (Android)</span><button class="copy">Copy</button></div><pre>1. registerService(callback, Type.RISKEVENT, 0.5)   <span class="cmt">// daftarkan callback lebih dulu</span>
-2. registerService(callback, Type.DEVINFO, 0.5)      <span class="cmt">// info perangkat (opsional)</span>
+2. registerService(callback, Type.DEVINFO, 0.5)      <span class="cmt">// sidik jari perangkat (udid)</span>
 3. setUserId(context, userId)                        <span class="cmt">// kaitkan user id</span>
 4. initAppsecEverisk(context, LICENSE_KEY)           <span class="cmt">// inisialisasi paling akhir</span></pre></div>
       <div class="note"><b>Penting</b>Pemanggilan <code>registerService</code> harus dilakukan sebelum <code>initAppsecEverisk</code>. Bila terbalik, callback tidak akan terpanggil.</div>
@@ -136,12 +136,12 @@
         <li><b>Meneruskan event ke sistem eksternal</b> (SIEM/backend) untuk monitoring real-time.</li>
       </ul>
       <p>Untuk meneruskan ke sistem eksternal, aplikasi mengirim payload event ke endpoint milik Anda. Pola umum: aplikasi mem-POST event ke sebuah <b>server forwarder</b>, yang kemudian meneruskannya ke SIEM.</p>
-      <div class="codeblock"><div class="cbar"><span class="fname">contoh: teruskan payload dari callback</span><button class="copy">Copy</button></div><pre>// di dalam callback RISKEVENT
-val payload = JSONObject()
+      <div class="codeblock"><div class="cbar"><span class="fname">contoh: teruskan payload dari callback</span><button class="copy">Copy</button></div><pre>// di dalam callback RISKEVENT; deviceUdid diperoleh dari callback DEVINFO
+val payload = JSONObject().put("ironsky", JSONObject()
     .put("security_event", ev.optString("key"))
     .put("risk_level", ev.optString("riskLevel"))
     .put("udid", deviceUdid)
-    .put("event_time", ev.optLong("time"))
+    .put("event_time", ev.optLong("time")))
 // kirim payload ke endpoint forwarder Anda (HTTP POST, di thread background)</pre></div>
     </section>
 
@@ -191,7 +191,7 @@ val payload = JSONObject()
 </pre></div>
 
       <h3>1. Sisi Aplikasi</h3>
-      <p>Di dalam callback, bangun payload lalu kirim via HTTP POST ke endpoint forwarder. Jalankan di thread background agar tidak memblokir UI.</p>
+      <p>Di dalam callback, bangun payload lalu kirim via HTTP POST ke endpoint forwarder. Jalankan di thread background agar tidak memblokir UI. Nilai <code>deviceUdid</code> diperoleh dari callback <code>DEVINFO</code> (lihat urutan inisialisasi).</p>
       <div class="codeblock"><div class="cbar"><span class="fname">Kotlin — teruskan event dari callback</span><button class="copy">Copy</button></div><pre>val payload = JSONObject().put("ironsky", JSONObject()
     .put("security_event", ev.optString("key"))
     .put("risk_level", ev.optString("riskLevel"))
