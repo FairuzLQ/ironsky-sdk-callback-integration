@@ -61,6 +61,7 @@
       <a href="#struktur">Struktur Event</a>
       <a href="#menangani">Menangani Event</a>
       <a href="#framework">Contoh per Framework</a>
+      <a href="#usecase-forwarder">Use Case: Server Forwarder</a>
       <a href="#catatan">Catatan Implementasi</a>
     </nav>
   </aside>
@@ -181,12 +182,64 @@ val payload = JSONObject()
       <p style="color:var(--muted);font-size:14px;margin-top:14px">Flutter dan React Native mengikuti pola yang sama: callback ditangani di sisi native, lalu (bila perlu) diteruskan ke lapisan Dart/JS melalui MethodChannel atau Native Module.</p>
     </section>
 
+    <section id="usecase-forwarder">
+      <h2>Use Case: Server Forwarder (Realtime ke SIEM)</h2>
+      <p>Ini penerapan konkret dari penanganan event di atas: aplikasi meneruskan setiap event callback ke sebuah <b>server forwarder milik klien</b>, yang menormalkan lalu merelay-nya ke SIEM secara real-time. Forwarder dibangun dan dijalankan di sisi klien.</p>
+      <div class="diagram codeblock"><div class="cbar"><span class="fname">alur</span></div><pre>
+   Mobile App + IronSKY SDK          Server Forwarder (klien)          SIEM
+        callback RISKEVENT  ── POST ─▶  terima + normalisasi  ────▶  rules → alert
+</pre></div>
+
+      <h3>1. Sisi Aplikasi</h3>
+      <p>Di dalam callback, bangun payload lalu kirim via HTTP POST ke endpoint forwarder. Jalankan di thread background agar tidak memblokir UI.</p>
+      <div class="codeblock"><div class="cbar"><span class="fname">Kotlin — teruskan event dari callback</span><button class="copy">Copy</button></div><pre>val payload = JSONObject().put("ironsky", JSONObject()
+    .put("security_event", ev.optString("key"))
+    .put("risk_level", ev.optString("riskLevel"))
+    .put("udid", deviceUdid)
+    .put("event_time", ev.optLong("time")))
+
+Thread {
+    val c = URL("https://forwarder.internal/ironsky").openConnection() as HttpURLConnection
+    c.requestMethod = "POST"; c.doOutput = true
+    c.setRequestProperty("Content-Type", "application/json")
+    c.setRequestProperty("Authorization", "Bearer &lt;TOKEN&gt;")
+    c.outputStream.use { it.write(payload.toString().toByteArray()) }
+    c.inputStream.close()
+}.start()</pre></div>
+
+      <h3>2. Server Forwarder (implementasi referensi)</h3>
+      <p>Forwarder menerima event, memverifikasi token, lalu menuliskannya ke lokasi yang dibaca SIEM. Contoh minimal dengan Python:</p>
+      <div class="codeblock"><div class="cbar"><span class="fname">forwarder.py</span><button class="copy">Copy</button></div><pre>from flask import Flask, request, abort
+import json
+
+app = Flask(__name__)
+OUT = "/opt/ironsky/out/events.jsonl"   <span class="cmt"># lokasi yang dibaca SIEM</span>
+
+@app.post("/ironsky")
+def ingest():
+    if request.headers.get("Authorization") != "Bearer &lt;TOKEN&gt;":
+        abort(401)
+    ev = request.get_json(force=True, silent=True) or {}
+    with open(OUT, "a") as f:
+        f.write(json.dumps(ev, ensure_ascii=False) + "\n")
+    return ("", 204)</pre></div>
+
+      <h3>3. Sisi SIEM</h3>
+      <p>SIEM membaca output forwarder sebagai log JSON, sama seperti pada metode S3, sehingga rule yang sama berlaku. Contoh Wazuh:</p>
+      <div class="codeblock"><div class="cbar"><span class="fname">/var/ossec/etc/ossec.conf</span><button class="copy">Copy</button></div><pre>&lt;localfile&gt;
+  &lt;log_format&gt;json&lt;/log_format&gt;
+  &lt;location&gt;/opt/ironsky/out/events.jsonl&lt;/location&gt;
+&lt;/localfile&gt;</pre></div>
+
+      <div class="note"><b>Catatan</b>Samakan skema payload dengan metode S3 (bungkus di bawah <code>ironsky</code>, mis. <code>ironsky.security_event</code>) agar rule/korelasi SIEM dapat dipakai untuk kedua metode. Jalankan forwarder di belakang HTTPS dan gunakan token autentikasi.</div>
+    </section>
+
     <section id="catatan">
       <h2>Catatan Implementasi</h2>
       <ul>
         <li>Jalankan pengiriman jaringan di thread background agar tidak memblokir UI.</li>
         <li>Nilai <code>key</code> pada callback identik dengan field <code>Security event</code> pada metode S3, sehingga aturan korelasi di SIEM dapat dipakai untuk kedua metode.</li>
-        <li>Detail penerusan ke SIEM melalui server forwarder akan dibahas pada use case terpisah.</li>
+        <li>Penerusan ke SIEM lewat server forwarder dijelaskan pada bagian <a href="#usecase-forwarder">Use Case: Server Forwarder</a> di atas.</li>
       </ul>
     </section>
 
