@@ -135,14 +135,7 @@
         <li><b>Menyesuaikan alur aplikasi</b>, mis. membatasi fitur tertentu saat perangkat berisiko tinggi.</li>
         <li><b>Meneruskan event ke sistem eksternal</b> (SIEM/backend) untuk monitoring real-time.</li>
       </ul>
-      <p>Untuk meneruskan ke sistem eksternal, aplikasi mengirim payload event ke endpoint milik Anda. Pola umum: aplikasi mem-POST event ke sebuah <b>server forwarder</b>, yang kemudian meneruskannya ke SIEM.</p>
-      <div class="codeblock"><div class="cbar"><span class="fname">contoh: teruskan payload dari callback</span><button class="copy">Copy</button></div><pre>// di dalam callback RISKEVENT; deviceUdid diperoleh dari callback DEVINFO
-val payload = JSONObject().put("ironsky", JSONObject()
-    .put("security_event", ev.optString("key"))
-    .put("risk_level", ev.optString("riskLevel"))
-    .put("udid", deviceUdid)
-    .put("event_time", ev.optLong("time")))
-// kirim payload ke endpoint forwarder Anda (HTTP POST, di thread background)</pre></div>
+      <p>Untuk meneruskan ke sistem eksternal, aplikasi mem-POST payload event ke endpoint milik Anda, umumnya sebuah <b>server forwarder</b> yang lalu meneruskannya ke SIEM. Contoh implementasi lengkapnya ada di bagian <a href="#usecase-forwarder">Use Case: Server Forwarder</a>.</p>
     </section>
 
     <section id="framework">
