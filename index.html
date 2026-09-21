@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>IronSKY — SDK Integration &amp; Customization via Callback</title>
-<meta name="description" content="Integrasi manual IronSKY SDK melalui callback untuk menangani security event langsung di sisi aplikasi." />
+<meta name="description" content="Manual IronSKY SDK integration via callback to handle security events directly in the app and forward them to a SIEM." />
 <style>
   :root{--bg:#0d1117;--bg-soft:#161b22;--border:#2a3140;--text:#e6edf3;--muted:#9aa7b6;
     --accent:#4f9cff;--accent-2:#7c5cff;--green:#3fb950;--amber:#d29922;--red:#f85149;--code-bg:#0b0f16;--radius:14px;--maxw:1200px;}
@@ -48,6 +48,8 @@
   .tabs button{background:#161d2b;border:1px solid var(--border);color:var(--muted);border-radius:8px 8px 0 0;padding:7px 14px;font-size:13px;cursor:pointer;font-weight:600}
   .tabs button.active{background:var(--code-bg);color:#cfe0ff}
   .tabpanel{display:none}.tabpanel.active{display:block}
+  .diagram{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:16px;margin:16px 0;overflow-x:auto}
+  .diagram pre{color:#b9c6d6;font-size:12.5px}
 </style>
 </head>
 <body>
@@ -55,79 +57,79 @@
   <aside class="sidebar">
     <div class="brand"><div class="logo">IS</div><div><b>IronSKY SDK</b><span>Integration via Callback</span></div></div>
     <nav class="nav">
-      <a href="#ringkasan">Ringkasan</a>
-      <a href="#perbandingan">Perbandingan Pendekatan</a>
+      <a href="#overview">Overview</a>
+      <a href="#comparison">Integration Approaches</a>
       <a href="#callback">Callback Mechanism</a>
-      <a href="#struktur">Struktur Event</a>
-      <a href="#framework">Contoh per Framework</a>
+      <a href="#structure">Event Structure</a>
+      <a href="#framework">Framework Examples</a>
       <a href="#usecase-forwarder">Use Case: Server Forwarder</a>
-      <a href="#catatan">Catatan Implementasi</a>
+      <a href="#notes">Implementation Notes</a>
     </nav>
   </aside>
 
   <main class="content">
     <div class="hero">
       <h1>SDK Integration &amp; Customization via Callback</h1>
-      <p>Pendekatan integrasi manual yang memberi tim developer fleksibilitas lebih tinggi: memanfaatkan callback mechanism IronSKY SDK untuk menangani security event secara langsung di sisi aplikasi, secara real-time.</p>
+      <p>A manual integration approach that gives development teams greater flexibility: use the IronSKY SDK's callback mechanism to handle security events directly in the app, in real time.</p>
       <div>
-        <span class="pill">Metode: SDK callback</span>
-        <span class="pill">Latensi: real-time</span>
-        <span class="pill">Target: tim developer</span>
+        <span class="pill">Method: SDK callback</span>
+        <span class="pill">Latency: real-time</span>
+        <span class="pill">Audience: development team</span>
       </div>
     </div>
 
-    <section id="ringkasan">
-      <h2>Ringkasan</h2>
-      <p>Di luar integrasi berbasis log forwarding, SecIron menyediakan SDK Integration secara manual yang memberikan fleksibilitas lebih tinggi bagi tim pengembang aplikasi. Melalui pendekatan ini, developer dapat memanfaatkan callback mechanism yang disediakan oleh IronSKY SDK untuk menangani security event secara langsung di sisi aplikasi, tanpa menunggu proses export/pull.</p>
-      <p>Dengan menerima event pada saat terjadinya, aplikasi dapat meneruskan event tersebut ke sistem eksternal, khususnya SIEM, secara real-time untuk kebutuhan monitoring dan korelasi insiden.</p>
+    <section id="overview">
+      <h2>Overview</h2>
+      <p>Beyond storage-based log forwarding, SecIron also offers manual SDK Integration that gives application development teams greater flexibility. With this approach, developers use the callback mechanism provided by the IronSKY SDK to handle security events directly in the app, without waiting for the export/pull process.</p>
+      <p>By receiving events as they occur, the app can forward them to an external system, in particular a <b>SIEM</b>, in real time for monitoring and incident correlation.</p>
     </section>
 
-    <section id="perbandingan">
-      <h2>Perbandingan Pendekatan Integrasi</h2>
+    <section id="comparison">
+      <h2>Integration Approaches</h2>
       <table>
-        <tr><th>Aspek</th><th>SIEM via S3 Log Forwarding</th><th>SDK Callback Manual</th></tr>
-        <tr><td>Target Pengguna</td><td>Tim SOC / Security Operations</td><td>Tim Developer Aplikasi</td></tr>
-        <tr><td>Arah Data</td><td>IronSKY → S3 → SIEM</td><td>IronSKY SDK → Custom Handler → Sistem Lain</td></tr>
-        <tr><td>Latensi</td><td>Periodik (scheduled pull), data tersedia H+1</td><td>Real-time (event-driven)</td></tr>
+        <tr><th>Aspect</th><th>SIEM via S3 Log Forwarding</th><th>SDK Callback (Manual)</th></tr>
+        <tr><td>Target users</td><td>SOC / Security Operations team</td><td>Application Development team</td></tr>
+        <tr><td>Data flow</td><td>IronSKY → S3 → SIEM</td><td>IronSKY SDK → Custom Handler → Other System</td></tr>
+        <tr><td>Latency</td><td>Periodic (scheduled pull), data available T+1</td><td>Real-time (event-driven)</td></tr>
       </table>
-      <p>Panduan integrasi via S3 tersedia terpisah pada <a href="https://fairuzlq.github.io/ironsky-storage-log-forwarding/">SIEM Integration via Storage-based Log Forwarding</a>.</p>
+      <p>The S3 integration guide is available separately at <a href="https://fairuzlq.github.io/ironsky-storage-log-forwarding/">SIEM Integration via Storage-based Log Forwarding</a>.</p>
     </section>
 
     <section id="callback">
       <h2>Callback Mechanism</h2>
-      <p>Aplikasi mendaftarkan sebuah callback untuk tipe <code>RISKEVENT</code>. Setiap kali IronSKY mendeteksi ancaman, callback dipanggil beserta detail event dalam bentuk JSON. Urutan pemanggilan berikut wajib diikuti:</p>
-      <div class="codeblock"><div class="cbar"><span class="fname">urutan inisialisasi (Android)</span><button class="copy">Copy</button></div><pre>1. registerService(callback, Type.RISKEVENT, 0.5)   <span class="cmt">// daftarkan callback lebih dulu</span>
-2. registerService(callback, Type.DEVINFO, 0.5)      <span class="cmt">// sidik jari perangkat (udid)</span>
-3. setUserId(context, userId)                        <span class="cmt">// kaitkan user id</span>
-4. initAppsecEverisk(context, LICENSE_KEY)           <span class="cmt">// inisialisasi paling akhir</span></pre></div>
-      <div class="note"><b>Penting</b>Pemanggilan <code>registerService</code> harus dilakukan sebelum <code>initAppsecEverisk</code>. Bila terbalik, callback tidak akan terpanggil.</div>
+      <p>The app registers a callback for the <code>RISKEVENT</code> type. Each time IronSKY detects a threat, the callback is invoked with the event details as JSON. The following call order is mandatory:</p>
+      <div class="codeblock"><div class="cbar"><span class="fname">initialization order (Android)</span><button class="copy">Copy</button></div><pre>1. registerService(callback, Type.RISKEVENT, 0.5)   <span class="cmt">// register the callback first</span>
+2. registerService(callback, Type.DEVINFO, 0.5)      <span class="cmt">// device fingerprint (udid)</span>
+3. setUserId(context, userId)                        <span class="cmt">// associate a user id</span>
+4. initAppsecEverisk(context, LICENSE_KEY)           <span class="cmt">// initialize last</span></pre></div>
+      <div class="note"><b>Important</b><code>registerService</code> must be called before <code>initAppsecEverisk</code>. If reversed, the callback will never fire.</div>
     </section>
 
-    <section id="struktur">
-      <h2>Struktur Event</h2>
-      <p>Objek yang diterima callback <code>RISKEVENT</code> berisi antara lain:</p>
-      <div class="codeblock"><div class="cbar"><span class="fname">contoh payload callback</span><button class="copy">Copy</button></div><pre>{
-  "key": "event_risk_root",           <span class="cmt">// jenis event keamanan</span>
+    <section id="structure">
+      <h2>Event Structure</h2>
+      <p>The object received by the <code>RISKEVENT</code> callback includes, among others:</p>
+      <div class="codeblock"><div class="cbar"><span class="fname">example callback payload</span><button class="copy">Copy</button></div><pre>{
+  "key": "event_risk_root",           <span class="cmt">// security event type</span>
   "name": "Root Detected",
   "riskLevel": "high",                 <span class="cmt">// low | medium | high</span>
-  "responseType": 1,                   <span class="cmt">// aksi RASP</span>
-  "responseI18n": "[{...pesan terlokalisasi...}]",
+  "responseType": 1,                   <span class="cmt">// RASP action</span>
+  "responseI18n": "[{...localized message...}]",
   "eventId": "1141###&lt;udid&gt;###...###event_risk_root",
   "time": 1789828899241
 }</pre></div>
       <table>
-        <tr><th>Field</th><th>Keterangan</th></tr>
-        <tr><td><code>key</code></td><td>Jenis event keamanan (root, injection, MITM, dan lainnya).</td></tr>
-        <tr><td><code>name</code></td><td>Nama singkat event.</td></tr>
-        <tr><td><code>riskLevel</code></td><td>Tingkat risiko: low, medium, atau high.</td></tr>
-        <tr><td><code>responseType</code></td><td>Kode aksi respons yang direkomendasikan SDK.</td></tr>
-        <tr><td><code>responseI18n</code></td><td>Pesan respons terlokalisasi (judul, isi, tombol).</td></tr>
-        <tr><td><code>eventId</code> / <code>time</code></td><td>Identitas unik event dan waktu kejadian.</td></tr>
+        <tr><th>Field</th><th>Description</th></tr>
+        <tr><td><code>key</code></td><td>Security event type (root, injection, MITM, and others).</td></tr>
+        <tr><td><code>name</code></td><td>Short event name.</td></tr>
+        <tr><td><code>riskLevel</code></td><td>Risk level: low, medium, or high.</td></tr>
+        <tr><td><code>responseType</code></td><td>Response action code recommended by the SDK.</td></tr>
+        <tr><td><code>responseI18n</code></td><td>Localized response message (title, body, button).</td></tr>
+        <tr><td><code>eventId</code> / <code>time</code></td><td>Unique event identifier and time of occurrence.</td></tr>
       </table>
     </section>
 
     <section id="framework">
-      <h2>Contoh per Framework</h2>
+      <h2>Framework Examples</h2>
       <div class="tabs">
         <button data-t="kt" class="active">Kotlin</button>
         <button data-t="jv">Java</button>
@@ -139,7 +141,7 @@
         val ev = result as? JSONObject ?: return
         val key = ev.optString("key")
         val riskLevel = ev.optString("riskLevel")
-        // teruskan event ke server forwarder / SIEM
+        // forward the event to your server forwarder / SIEM
     }
 }, Type.RISKEVENT, 0.5)</pre></div>
       </div>
@@ -149,7 +151,7 @@
         if (!(result instanceof JSONObject)) return;
         JSONObject ev = (JSONObject) result;
         String key = ev.optString("key");
-        // teruskan event ke server forwarder / SIEM
+        // forward the event to your server forwarder / SIEM
     }
 }, Type.RISKEVENT, 0.5);</pre></div>
       </div>
@@ -157,23 +159,23 @@
         <div class="codeblock"><div class="cbar"><span class="fname">Swift</span><button class="copy">Copy</button></div><pre>RiskStub.registerService { data, modularType in
     guard let ev = data as? [String: Any] else { return }
     let key = ev["key"] as? String ?? ""
-    // teruskan event ke server forwarder / SIEM
+    // forward the event to your server forwarder / SIEM
 }</pre></div>
       </div>
-      <p style="color:var(--muted);font-size:14px;margin-top:14px">Flutter dan React Native mengikuti pola yang sama: callback ditangani di sisi native, lalu (bila perlu) diteruskan ke lapisan Dart/JS melalui MethodChannel atau Native Module.</p>
+      <p style="color:var(--muted);font-size:14px;margin-top:14px">Flutter and React Native follow the same pattern: the callback is handled on the native side, then (if needed) forwarded to the Dart/JS layer via MethodChannel or a Native Module.</p>
     </section>
 
     <section id="usecase-forwarder">
-      <h2>Use Case: Server Forwarder (Realtime ke SIEM)</h2>
-      <p>Aplikasi meneruskan setiap event callback ke sebuah <b>server forwarder milik klien</b>, yang menormalkan lalu merelay-nya ke SIEM secara real-time. Forwarder dibangun dan dijalankan di sisi klien.</p>
-      <div class="diagram codeblock"><div class="cbar"><span class="fname">alur</span></div><pre>
-   Mobile App + IronSKY SDK          Server Forwarder (klien)          SIEM
-        callback RISKEVENT  ── POST ─▶  terima + normalisasi  ────▶  rules → alert
+      <h2>Use Case: Server Forwarder (Realtime to SIEM)</h2>
+      <p>The app forwards each callback event to a <b>client-owned server forwarder</b>, which normalizes and relays it to the SIEM in real time. The forwarder is built and run on the client side.</p>
+      <div class="diagram"><pre>
+   Mobile App + IronSKY SDK          Server Forwarder (client)          SIEM
+        callback RISKEVENT  ── POST ─▶  receive + normalize  ────▶  rules → alert
 </pre></div>
 
-      <h3>1. Sisi Aplikasi</h3>
-      <p>Di dalam callback, bangun payload lalu kirim via HTTP POST ke endpoint forwarder. Jalankan di thread background agar tidak memblokir UI. Nilai <code>deviceUdid</code> diperoleh dari callback <code>DEVINFO</code> (lihat urutan inisialisasi).</p>
-      <div class="codeblock"><div class="cbar"><span class="fname">Kotlin — teruskan event dari callback</span><button class="copy">Copy</button></div><pre>val payload = JSONObject().put("ironsky", JSONObject()
+      <h3>1. App Side</h3>
+      <p>Inside the callback, build the payload and send it via HTTP POST to the forwarder endpoint. Run it on a background thread so the UI is not blocked. The <code>deviceUdid</code> value comes from the <code>DEVINFO</code> callback (see the initialization order).</p>
+      <div class="codeblock"><div class="cbar"><span class="fname">Kotlin — forward the event from the callback</span><button class="copy">Copy</button></div><pre>val payload = JSONObject().put("ironsky", JSONObject()
     .put("security_event", ev.optString("key"))
     .put("risk_level", ev.optString("riskLevel"))
     .put("udid", deviceUdid)
@@ -188,13 +190,13 @@ Thread {
     c.inputStream.close()
 }.start()</pre></div>
 
-      <h3>2. Server Forwarder (implementasi referensi)</h3>
-      <p>Forwarder menerima event, memverifikasi token, lalu menuliskannya ke lokasi yang dibaca SIEM. Contoh minimal dengan Python:</p>
+      <h3>2. Server Forwarder (reference implementation)</h3>
+      <p>The forwarder receives the event, verifies the token, then writes it to the location the SIEM reads. Minimal example in Python:</p>
       <div class="codeblock"><div class="cbar"><span class="fname">forwarder.py</span><button class="copy">Copy</button></div><pre>from flask import Flask, request, abort
 import json
 
 app = Flask(__name__)
-OUT = "/opt/ironsky/out/events.jsonl"   <span class="cmt"># lokasi yang dibaca SIEM</span>
+OUT = "/opt/ironsky/out/events.jsonl"   <span class="cmt"># location read by the SIEM</span>
 
 @app.post("/ironsky")
 def ingest():
@@ -205,34 +207,34 @@ def ingest():
         f.write(json.dumps(ev, ensure_ascii=False) + "\n")
     return ("", 204)</pre></div>
 
-      <h3>3. Sisi SIEM</h3>
-      <p>SIEM membaca output forwarder sebagai log JSON, sama seperti pada metode S3, sehingga rule yang sama berlaku. Contoh Wazuh:</p>
+      <h3>3. SIEM Side</h3>
+      <p>The SIEM reads the forwarder's output as JSON logs, the same as in the S3 method, so the same rules apply. Wazuh example:</p>
       <div class="codeblock"><div class="cbar"><span class="fname">/var/ossec/etc/ossec.conf</span><button class="copy">Copy</button></div><pre>&lt;localfile&gt;
   &lt;log_format&gt;json&lt;/log_format&gt;
   &lt;location&gt;/opt/ironsky/out/events.jsonl&lt;/location&gt;
 &lt;/localfile&gt;</pre></div>
 
-      <div class="note"><b>Catatan</b>Samakan skema payload dengan metode S3 (bungkus di bawah <code>ironsky</code>, mis. <code>ironsky.security_event</code>) agar rule/korelasi SIEM dapat dipakai untuk kedua metode. Jalankan forwarder di belakang HTTPS dan gunakan token autentikasi.</div>
+      <div class="note"><b>Note</b>Keep the payload schema consistent with the S3 method (wrap it under <code>ironsky</code>, e.g. <code>ironsky.security_event</code>) so the same SIEM rules/correlation apply to both methods. Run the forwarder behind HTTPS and use an authentication token.</div>
     </section>
 
-    <section id="catatan">
-      <h2>Catatan Implementasi</h2>
+    <section id="notes">
+      <h2>Implementation Notes</h2>
       <ul>
-        <li>Jalankan pengiriman jaringan di thread background agar tidak memblokir UI.</li>
-        <li>Nilai <code>key</code> pada callback identik dengan field <code>Security event</code> pada metode S3, sehingga aturan korelasi di SIEM dapat dipakai untuk kedua metode.</li>
-        <li>Penerusan ke SIEM lewat server forwarder dijelaskan pada bagian <a href="#usecase-forwarder">Use Case: Server Forwarder</a> di atas.</li>
+        <li>Perform network sending on a background thread so the UI is not blocked.</li>
+        <li>The callback's <code>key</code> value is identical to the <code>Security event</code> field in the S3 method, so the same SIEM correlation rules apply to both.</li>
+        <li>Forwarding to the SIEM via a server forwarder is covered in the <a href="#usecase-forwarder">Use Case: Server Forwarder</a> section above.</li>
       </ul>
     </section>
 
     <div class="foot">
-      IronSKY — SIEM/External System Integration. Contoh kode bersifat ilustratif; sesuaikan dengan konfigurasi aplikasi Anda.
+      IronSKY — SIEM/External System Integration. Code samples are illustrative; adapt them to your application's configuration.
     </div>
   </main>
 </div>
 <script>
   document.querySelectorAll('.codeblock').forEach(function(cb){
     var btn=cb.querySelector('.copy'),pre=cb.querySelector('pre'); if(!btn||!pre)return;
-    btn.addEventListener('click',function(){navigator.clipboard.writeText(pre.innerText).then(function(){var t=btn.textContent;btn.textContent='Tersalin';setTimeout(function(){btn.textContent=t},1400)})});
+    btn.addEventListener('click',function(){navigator.clipboard.writeText(pre.innerText).then(function(){var t=btn.textContent;btn.textContent='Copied';setTimeout(function(){btn.textContent=t},1400)})});
   });
   document.querySelectorAll('.tabs').forEach(function(bar){
     var panels=bar.parentElement.querySelectorAll('.tabpanel');
