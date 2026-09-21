@@ -59,7 +59,6 @@
       <a href="#perbandingan">Perbandingan Pendekatan</a>
       <a href="#callback">Callback Mechanism</a>
       <a href="#struktur">Struktur Event</a>
-      <a href="#menangani">Menangani Event</a>
       <a href="#framework">Contoh per Framework</a>
       <a href="#usecase-forwarder">Use Case: Server Forwarder</a>
       <a href="#catatan">Catatan Implementasi</a>
@@ -127,17 +126,6 @@
       </table>
     </section>
 
-    <section id="menangani">
-      <h2>Menangani Event</h2>
-      <p>Di dalam callback, developer bebas menentukan penanganan event, misalnya:</p>
-      <ul>
-        <li><b>Menampilkan UI kustom</b> sesuai <code>riskLevel</code> atau <code>responseType</code>.</li>
-        <li><b>Menyesuaikan alur aplikasi</b>, mis. membatasi fitur tertentu saat perangkat berisiko tinggi.</li>
-        <li><b>Meneruskan event ke sistem eksternal</b> (SIEM/backend) untuk monitoring real-time.</li>
-      </ul>
-      <p>Untuk meneruskan ke sistem eksternal, aplikasi mem-POST payload event ke endpoint milik Anda, umumnya sebuah <b>server forwarder</b> yang lalu meneruskannya ke SIEM. Contoh implementasi lengkapnya ada di bagian <a href="#usecase-forwarder">Use Case: Server Forwarder</a>.</p>
-    </section>
-
     <section id="framework">
       <h2>Contoh per Framework</h2>
       <div class="tabs">
@@ -177,7 +165,7 @@
 
     <section id="usecase-forwarder">
       <h2>Use Case: Server Forwarder (Realtime ke SIEM)</h2>
-      <p>Ini penerapan konkret dari penanganan event di atas: aplikasi meneruskan setiap event callback ke sebuah <b>server forwarder milik klien</b>, yang menormalkan lalu merelay-nya ke SIEM secara real-time. Forwarder dibangun dan dijalankan di sisi klien.</p>
+      <p>Aplikasi meneruskan setiap event callback ke sebuah <b>server forwarder milik klien</b>, yang menormalkan lalu merelay-nya ke SIEM secara real-time. Forwarder dibangun dan dijalankan di sisi klien.</p>
       <div class="diagram codeblock"><div class="cbar"><span class="fname">alur</span></div><pre>
    Mobile App + IronSKY SDK          Server Forwarder (klien)          SIEM
         callback RISKEVENT  ── POST ─▶  terima + normalisasi  ────▶  rules → alert
