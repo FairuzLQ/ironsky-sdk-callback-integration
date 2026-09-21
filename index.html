@@ -79,7 +79,7 @@
     <section id="ringkasan">
       <h2>Ringkasan</h2>
       <p>Di luar integrasi berbasis log forwarding, SecIron menyediakan SDK Integration secara manual yang memberikan fleksibilitas lebih tinggi bagi tim pengembang aplikasi. Melalui pendekatan ini, developer dapat memanfaatkan callback mechanism yang disediakan oleh IronSKY SDK untuk menangani security event secara langsung di sisi aplikasi, tanpa menunggu proses export/pull.</p>
-      <p>Dengan menerima event pada saat terjadinya, aplikasi dapat menampilkan respons kustom, menyesuaikan alur bisnis, atau meneruskan event ke sistem eksternal (mis. SIEM atau backend internal) secara real-time.</p>
+      <p>Dengan menerima event pada saat terjadinya, aplikasi dapat meneruskan event tersebut ke sistem eksternal, khususnya SIEM, secara real-time untuk kebutuhan monitoring dan korelasi insiden.</p>
     </section>
 
     <section id="perbandingan">
@@ -139,7 +139,7 @@
         val ev = result as? JSONObject ?: return
         val key = ev.optString("key")
         val riskLevel = ev.optString("riskLevel")
-        // tangani event: UI kustom / batasi fitur / teruskan ke forwarder
+        // teruskan event ke server forwarder / SIEM
     }
 }, Type.RISKEVENT, 0.5)</pre></div>
       </div>
@@ -149,7 +149,7 @@
         if (!(result instanceof JSONObject)) return;
         JSONObject ev = (JSONObject) result;
         String key = ev.optString("key");
-        // tangani event di sini
+        // teruskan event ke server forwarder / SIEM
     }
 }, Type.RISKEVENT, 0.5);</pre></div>
       </div>
@@ -157,7 +157,7 @@
         <div class="codeblock"><div class="cbar"><span class="fname">Swift</span><button class="copy">Copy</button></div><pre>RiskStub.registerService { data, modularType in
     guard let ev = data as? [String: Any] else { return }
     let key = ev["key"] as? String ?? ""
-    // tangani event di sini
+    // teruskan event ke server forwarder / SIEM
 }</pre></div>
       </div>
       <p style="color:var(--muted);font-size:14px;margin-top:14px">Flutter dan React Native mengikuti pola yang sama: callback ditangani di sisi native, lalu (bila perlu) diteruskan ke lapisan Dart/JS melalui MethodChannel atau Native Module.</p>
